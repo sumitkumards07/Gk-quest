@@ -37,3 +37,12 @@ tmp_jdk/
 # Android build outputs
 android/app/build/
 android/build/
+
+# Credentials and secrets
+*.pem
+*.key
+secretKey.json
+serviceAccountKey.json
+admin/
+.env.local
+.env.*.local
