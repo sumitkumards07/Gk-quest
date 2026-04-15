@@ -16,13 +16,42 @@ export default function Users() {
   };
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), orderBy('weeklyTotal', 'desc'), limit(100));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const uList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setUsers(uList);
+    // Try query with weeklyTotal ordering first, with fallback
+    try {
+      const q = query(collection(db, 'users'), orderBy('weeklyTotal', 'desc'), limit(100));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const uList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setUsers(uList);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Error fetching users with weeklyTotal ordering:", error);
+          // Fallback: fetch users without specific ordering
+          const fallbackQ = query(collection(db, 'users'), limit(100));
+          const fallbackUnsub = onSnapshot(
+            fallbackQ,
+            (snapshot) => {
+              const uList = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a, b) => (b.weeklyTotal || 0) - (a.weeklyTotal || 0));
+              setUsers(uList);
+              setLoading(false);
+            },
+            (fallbackError) => {
+              console.error("Fallback query also failed:", fallbackError);
+              setLoading(false);
+            }
+          );
+          return () => fallbackUnsub();
+        }
+      );
+      return () => unsubscribe();
+    } catch (err) {
+      console.error("Error setting up query:", err);
       setLoading(false);
-    });
-    return () => unsubscribe();
+    }
   }, []);
 
   const toggleVerification = async (userId, currentStatus) => {
