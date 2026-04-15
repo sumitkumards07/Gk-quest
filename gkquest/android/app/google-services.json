@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "550938272733",
+    "project_id": "gk-quest-with-rewards",
+    "storage_bucket": "gk-quest-with-rewards.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:550938272733:android:4dec5b233290c2d4aa8c34",
+        "android_client_info": {
+          "package_name": "com.gkquest.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "550938272733-kbrfbjirqlppl8h818dse3td0msmrupk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvIPzn8dv2y0a7RfQGbrxtOhs_0o3wqxI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "550938272733-kbrfbjirqlppl8h818dse3td0msmrupk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

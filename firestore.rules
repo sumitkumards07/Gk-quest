@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email.matches('.*@gkquest\\.com$') ||
+        request.auth.token.email == 'sumit@example.com'
+      );
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function num(data, key) {
+      return data.get(key, 0);
+    }
+
+    // Max single-update bump for quiz-derived fields (points ~ correct * 10 + small time bonus).
+    function maxQuizPointsDelta() {
+      return 5000;
+    }
+
+    match /questions/{questionId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /payout_requests/{requestId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+
+      // Profile bootstrap
+      allow create: if isOwner(userId)
+        && num(request.resource.data, 'totalScore') == 0
+        && num(request.resource.data, 'walletBalance') == 0
+        && num(request.resource.data, 'weeklyTotal') == 0
+        && num(request.resource.data, 'questionsAttempted') == 0;
+
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified', 'email', 'walletBalance']) &&
+        num(request.resource.data, 'questionsAttempted') >= num(resource.data, 'questionsAttempted') &&
+        num(request.resource.data, 'questionsAttempted') <= num(resource.data, 'questionsAttempted') + 100 &&
+        (
+          // Normal score increase
+          (request.resource.data.totalScore >= num(resource.data, 'totalScore') &&
+           request.resource.data.totalScore <= num(resource.data, 'totalScore') + maxQuizPointsDelta() &&
+           request.resource.data.weeklyTotal >= num(resource.data, 'weeklyTotal') &&
+           request.resource.data.weeklyTotal <= num(resource.data, 'weeklyTotal') + maxQuizPointsDelta()) ||
+          // Automated weekly reset (Sunday logic) — also handles first-ever reset
+          (request.resource.data.weeklyTotal == 0 &&
+           request.resource.data.totalScore == 0 &&
+           request.resource.data.keys().hasAll(['lastWeeklyReset']) &&
+           (!resource.data.keys().hasAll(['lastWeeklyReset']) || request.resource.data.lastWeeklyReset > resource.data.lastWeeklyReset))
+        )
+      );
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      // Client may only append own quiz rewards (XP or Money); ledger is immutable afterward.
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && (request.resource.data.type == 'Quiz XP' || request.resource.data.type == 'Quiz Reward')
+        && request.resource.data.status == 'Success'
+        && (
+          (request.resource.data.xp is number && request.resource.data.xp >= 0 && request.resource.data.xp <= maxQuizPointsDelta()) ||
+          (request.resource.data.amount is number && request.resource.data.amount >= 0 && request.resource.data.amount <= maxQuizPointsDelta())
+        );
+      allow update, delete: if false;
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

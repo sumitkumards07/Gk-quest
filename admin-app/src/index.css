@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #2444eb;
+  --primary-glow: rgba(36, 68, 235, 0.15);
+  --secondary: #45fec9;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface selection:bg-primary/20 selection:text-primary overflow-x-hidden;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Sophisticated Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-outline-variant/30 rounded-full hover:bg-primary/40 transition-colors;
+  }
+
+  button, a {
+    @apply transition-all duration-300;
+  }
+
+  input, textarea, select {
+    @apply focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all;
+  }
+}
+
+/* Glassmorphism Utilities */
+.glass-surface {
+  @apply bg-surface/80 backdrop-blur-xl border border-white/10;
+}
+
+.kinetic-glow {
+  box-shadow: 0 0 40px var(--primary-glow);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
