@@ -6,6 +6,29 @@ import { auth, db } from './firebase';
 import { SettingsContext } from './App';
 import { fetchDailyQuestions, fetchLastSession } from './store/quizSlice';
 
+function toDateSafe(value) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value.toDate === 'function') {
+    const parsed = value.toDate();
+    return Number.isNaN(parsed?.getTime?.()) ? null : parsed;
+  }
+  if (typeof value === 'object' && typeof value.seconds === 'number') {
+    const parsed = new Date(value.seconds * 1000);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isSameUtcDay(a, b) {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -28,11 +51,11 @@ export default function Home() {
     const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       const data = snap.data();
       setUserData(data);
-      if (data?.lastAttemptDate) {
-        const lastDate = typeof data.lastAttemptDate.toDate === 'function' ? data.lastAttemptDate.toDate() : new Date(data.lastAttemptDate);
+      const lastAttempt = toDateSafe(data?.lastAttemptStartDate || data?.lastAttemptDate);
+      if (lastAttempt) {
         const now = new Date();
         const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        const lastUTC = new Date(Date.UTC(lastDate.getUTCFullYear(), lastDate.getUTCMonth(), lastDate.getUTCDate()));
+        const lastUTC = new Date(Date.UTC(lastAttempt.getUTCFullYear(), lastAttempt.getUTCMonth(), lastAttempt.getUTCDate()));
         setPlayedToday(todayUTC.getTime() === lastUTC.getTime());
       } else {
         setPlayedToday(false);
@@ -108,6 +131,10 @@ export default function Home() {
   // Show "completed" hero when: user played today's daily OR finished all campaigns
   const showCompletedHero = (!canStartQuiz && !activeCampaignId) || hasFinished || allCampaignsAttempted;
   const dailyLockout = showCompletedHero && !activeCampaignId && !allCampaignsAttempted;
+  const lastCompletedAt = toDateSafe(userData?.lastSession?.timestamp) || toDateSafe(userData?.lastAttemptDate);
+  const todaysXp = lastCompletedAt && isSameUtcDay(lastCompletedAt, new Date())
+    ? (userData?.todayScore || 0)
+    : 0;
 
   // Show Rank + Session buttons when the hero says "completed" AND user has session data
   const showRankAndSession = showCompletedHero;
@@ -277,7 +304,7 @@ export default function Home() {
             <div className="z-10">
               <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-gray-400">Today's XP</span>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="font-headline text-3xl font-black text-blue-600">{userData?.todayScore !== undefined ? userData.todayScore : '--'}</span>
+                <span className="font-headline text-3xl font-black text-blue-600">{todaysXp}</span>
                 <span className="font-headline text-xl font-bold text-gray-300">XP</span>
               </div>
             </div>

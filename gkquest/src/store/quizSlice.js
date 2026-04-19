@@ -25,6 +25,21 @@ function shuffleArray(items) {
   return arr;
 }
 
+function toDateSafe(value) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value.toDate === "function") {
+    const parsed = value.toDate();
+    return Number.isNaN(parsed?.getTime?.()) ? null : parsed;
+  }
+  if (typeof value === "object" && typeof value.seconds === "number") {
+    const parsed = new Date(value.seconds * 1000);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // Async Thunk to fetch platform settings (timer, rewards, etc)
 export
 const fetchPlatformSettings = createAsyncThunk(
@@ -100,9 +115,7 @@ return rejectWithValue("Authentication required");
         return rejectWithValue("ALREADY_PLAYED");
       } else {
         // No campaigns exist — daily fallback, limit 1 per day
-        const lastDate = typeof userData.lastAttemptDate?.toDate === 'function'
-          ? userData.lastAttemptDate.toDate()
-          : (userData.lastAttemptDate ? new Date(userData.lastAttemptDate) : null);
+        const lastDate = toDateSafe(userData.lastAttemptStartDate || userData.lastAttemptDate);
         if (lastDate) {
           const today = new Date();
           if (
@@ -146,7 +159,7 @@ return rejectWithValue("Authentication required");
 
       // 5. Track attempt (NON-BLOCKING — never prevents quiz from starting)
       updateDoc(userRef, {
-        lastAttemptDate: serverTimestamp(),
+        lastAttemptStartDate: serverTimestamp(),
         ...(activeCampId ? { attemptedCampaignIds: arrayUnion(activeCampId) } : {}),
       }).catch(e => {
         console.warn("Attempt tracking write failed (non-blocking):", e.message);
@@ -229,9 +242,7 @@ const submitQuizResults = createAsyncThunk(
           }
 
           // Calculate streak
-          const lastDate = typeof data.lastAttemptDate?.toDate === 'function'
-            ? data.lastAttemptDate.toDate()
-            : (data.lastAttemptDate ? new Date(data.lastAttemptDate) : null);
+          const lastDate = toDateSafe(data?.lastSession?.timestamp) || toDateSafe(data.lastAttemptDate);
           if (lastDate) {
             const today = new Date();
             const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));

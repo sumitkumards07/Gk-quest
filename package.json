@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "reset:xp": "node scripts/reset_xp.js"
+  },
   "dependencies": {
     "firebase-admin": "^13.7.0"
   }

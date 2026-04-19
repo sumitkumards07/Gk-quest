@@ -197,6 +197,40 @@ export default function Dashboard() {
               <p className="text-sm text-on-secondary-container opacity-70 group-hover:text-on-secondary">Manage pending verifications</p>
             </div>
           </div>
+          <div 
+            onClick={async () => {
+              if (window.confirm("RESET WEEKLY XP: This will set weeklyTotal & totalScore to 0 for ALL users. Continue?") && window.prompt("Type 'RESET' to confirm:") === 'RESET') {
+                try {
+                  const { collection, getDocs, writeBatch, serverTimestamp } = await import('firebase/firestore');
+                  const snap = await getDocs(collection(db, 'users'));
+                  if (snap.empty) return alert("No users found.");
+                  
+                  const BATCH_SIZE = 500;
+                  const docs = snap.docs;
+                  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+                    const batch = writeBatch(db);
+                    docs.slice(i, i + BATCH_SIZE).forEach(d => {
+                      batch.update(d.ref, { totalScore: 0, weeklyTotal: 0, lastWeeklyReset: serverTimestamp() });
+                    });
+                    await batch.commit();
+                  }
+                  alert("Weekly XP Reset Successful!");
+                } catch (e) {
+                  alert("Reset Failed: " + e.message);
+                }
+              }
+            }} 
+            className="bg-orange-500/10 p-6 rounded-xl flex flex-col justify-between min-h-[160px] group transition-all hover:bg-orange-600 hover:text-white cursor-pointer border border-orange-500/20 shadow-sm shadow-orange-500/5 hover:shadow-orange-500/20"
+          >
+            <div className="flex justify-between">
+              <span className="material-symbols-outlined text-3xl text-orange-600 group-hover:text-white">history_toggle_off</span>
+              <span className="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity">dangerous</span>
+            </div>
+            <div>
+              <h4 className="font-headline font-extrabold text-lg group-hover:text-white">Reset Weekly XP</h4>
+              <p className="text-sm opacity-70 group-hover:text-white">Manual Sunday Wipe</p>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -320,6 +320,64 @@ export default function Settings() {
               <span className="material-symbols-outlined font-bold">dangerous</span>
               Dangerous Actions
             </h3>
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 bg-orange-500/5 rounded-2xl border border-orange-500/10">
+              <div className="flex-1">
+                <h4 className="text-sm font-black uppercase tracking-widest text-orange-500">Reset Weekly Ranks & XP</h4>
+                <p className="text-[10px] font-bold mt-1 max-w-sm uppercase tracking-wider text-on-surface-variant">
+                  This will reset 'weeklyTotal' and 'totalScore' to 0 for ALL users. Use this to manually start a fresh week.
+                </p>
+              </div>
+              <button 
+                onClick={async () => {
+                  if (window.confirm("Are you sure you want to reset the Weekly Ranks and XP for all users?") && window.prompt("Type 'RESET' to confirm weekly reset:") === 'RESET') {
+                    try {
+                      setSaving(true);
+                      const { collection, getDocs, writeBatch, serverTimestamp } = await import('firebase/firestore');
+                      
+                      const snap = await getDocs(collection(db, 'users'));
+                      if (snap.empty) {
+                        alert("No users found.");
+                        setSaving(false);
+                        return;
+                      }
+
+                      const BATCH_SIZE = 500;
+                      const docs = snap.docs;
+                      let totalReset = 0;
+                      
+                      for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+                        const batch = writeBatch(db);
+                        const chunk = docs.slice(i, i + BATCH_SIZE);
+                        
+                        chunk.forEach((doc) => {
+                          batch.update(doc.ref, {
+                            totalScore: 0,
+                            weeklyTotal: 0,
+                            lastWeeklyReset: serverTimestamp()
+                          });
+                        });
+                        
+                        await batch.commit();
+                        totalReset += chunk.length;
+                      }
+                      
+                      alert(`Weekly Ranks & XP reset successfully for ${totalReset} user(s).`);
+                    } catch (e) {
+                      console.error("Weekly reset failed:", e);
+                      alert("Weekly reset failed: " + e.message);
+                    } finally {
+                      setSaving(false);
+                    }
+                  }
+                }}
+                disabled={saving}
+                className="px-8 py-3 rounded-xl bg-orange-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-orange-500/20"
+              >
+                Reset Weekly XP
+              </button>
+            </div>
+
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 bg-error/5 rounded-2xl border border-error/10">
               <div className="flex-1">
                 <h4 className="text-sm font-black uppercase tracking-widest text-error">Wipe User Data</h4>
